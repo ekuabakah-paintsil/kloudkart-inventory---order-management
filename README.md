@@ -114,8 +114,8 @@ category rollup, `run_all.sql`, and the five written deliverables.
 
 ## AI use
 
-[One line declaring what AI was used for, as required by the DE03 AI policy.]
+AI was used for understanding concepts as well as assitance in set-up, and explaining codes.
 
 ## Author
 
-WISDOMSKA (Senya)
+Ekua Micah Abakah-Paintsil
