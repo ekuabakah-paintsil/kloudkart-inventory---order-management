@@ -1,7 +1,9 @@
 # Memo to Nana
 
 **From:** Ekua Micah Abakah-Paintsil
+
 **Date:** 25 November 2026
+
 **Subject:** Overselling, the Monday report, and what I found in your data
 
 ## What I found
