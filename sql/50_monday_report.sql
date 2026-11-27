@@ -9,15 +9,15 @@
 -- WHY THE OLD REPORT TOOK ~40 MINUTES
 --   It looked each figure up separately: for each of ~40,000 customers, one search for the
 --   total, one for the count and one for EACH of 12 months, about 560,000 searches of the
---   orders table. (sql/x50_monday_report_before.sql reproduces it for timing.)
+--   orders table. (measurement/x50_monday_report_before.sql reproduces it for timing.)
 --
 -- How it is fast: every figure comes from ONE pass over orders (GROUP BY customer with
 -- FILTER per month) and window functions for the ranking and running total, instead of a
 -- separate lookup per customer per month. No bigger server, no copy of the data to refresh:
 -- the views always show current figures. Timings: docs/measurement_report.md,
--- "before" query: sql/x50_monday_report_before.sql.  (Decision record ADR-003.)
+-- "before" query: measurement/x50_monday_report_before.sql.  (Decision record ADR-002.)
 --
--- Decisions (see the decision records, ADR-004):
+-- Decisions (see the decision records, ADR-003):
 --   * Spend = orders.total_amount (what checkout charged). Order lines are damaged in four
 --     ways (F-11, F-12, F-13, F-14); the stored total agrees with them in 98.5% of orders.
 --   * Counted: pending, shipped, completed. Not counted: cancelled, refunded (money returned).
