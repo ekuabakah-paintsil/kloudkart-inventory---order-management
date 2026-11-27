@@ -82,7 +82,7 @@ SELECT * FROM v_data_health;
 -- EXECUTE runs the query and throws the rows away, so only the work is measured.
 -- The timings go into a TEMP table (gone when this session ends).
 \o
-\echo '== timing each report 10 times (takes a few seconds)'
+\echo '== timing each report 10 times (takes about 15 seconds)'
 CREATE TEMP TABLE report_timings (query text, run integer, ms numeric);
 DO $$
 DECLARE

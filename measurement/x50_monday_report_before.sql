@@ -17,8 +17,8 @@
 --
 -- WARNING: run against the full customer list this can take a very long time. Time it on
 -- a sample and scale up, e.g. change LIMIT 500 below and multiply by (customers / 500).
--- On a synthetic extract of the same size (40,533 customers, 160,006 orders) 500 customers
--- took 38.8 s, i.e. about 52 minutes for everyone, consistent with Adwoa's ~40 minutes.
+-- On the real extract, 500 customers took 38.5 s (plan: 37,937 ms), i.e. about 52 minutes
+-- for all 40,420 customers, consistent with Adwoa's ~40 minutes that sometimes don't finish.
 --
 -- Run it on the RAW load (after schema.sql + load.sql, BEFORE 00_run_all.sql), so it
 -- measures the database as Adwoa has it today, without the indexes the solution adds.

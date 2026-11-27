@@ -78,11 +78,11 @@ SELECT * FROM v_low_stock_rollup;
 -- EXPLAIN (ANALYZE, BUFFERS) runs the query and prints the plan PostgreSQL chose, with the
 -- real time and rows of every step (Learning Path, chapter 11). Compare with the plan from
 -- x50: there, 14 SubPlans each loop once per customer; here, the orders table is read ONCE
--- (one Seq Scan feeding one HashAggregate / GroupAggregate). BUFFERS shows how much data
+-- (on the real run: one Index Scan on orders_customer_id_idx feeding one GroupAggregate). BUFFERS shows how much data
 -- was read from memory ("hit") versus disk ("read").
 \echo '== plan: monday_report'
 EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM monday_report;
 \echo '== plan: v_low_stock_rollup'
 EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM v_low_stock_rollup;
 
-\echo '== done: send these Time lines and plans to fill docs/measurement_report.md'
+\echo '== done: these Time lines and plans are summarised in docs/measurement_report.md'
