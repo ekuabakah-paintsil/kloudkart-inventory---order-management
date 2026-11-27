@@ -5,7 +5,8 @@
 -- WHAT IT DOES
 --   Saves the 56 integrity checks on the RAW data as a CSV: the BEFORE half of the
 --   before/after comparison. (x90_export_results.sql saves the AFTER half.)
---   Counts only, no customer data: safe to commit.
+--   Also saves the column-by-column profile of the raw data (diagnosis/05_profile.sql).
+--   Counts, lengths and codes only, no customer data: safe to commit.
 --
 -- RUN IT on the raw load, i.e. after schema.sql + load.sql and BEFORE 00_run_all.sql:
 --   docker exec -w /lab -i kloudkart psql -U postgres -v ON_ERROR_STOP=1 -f schema.sql
@@ -24,6 +25,10 @@
 \i diagnosis/01_integrity_checks.sql
 
 -- Raw row counts: the "Raw load" rows of the Reconciliation table.
+-- The column profile of the data exactly as delivered.
+\o results/profile_before.csv
+\i diagnosis/05_profile.sql
+
 \o results/row_counts_before.csv
 SELECT 'categories' AS table_name, count(*) AS rows FROM categories
 UNION ALL SELECT 'products',      count(*) FROM products
@@ -34,4 +39,4 @@ UNION ALL SELECT 'inventory_log', count(*) FROM inventory_log;
 
 \o
 \pset format aligned
-\echo '== done: results/integrity_checks_before.csv and results/row_counts_before.csv'
+\echo '== done: results/integrity_checks_before.csv, results/profile_before.csv and results/row_counts_before.csv'

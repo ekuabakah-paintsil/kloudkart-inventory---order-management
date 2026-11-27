@@ -139,7 +139,8 @@ docker exec -w /lab -i -e PAGER=cat kloudkart psql -U postgres -f measurement/x8
 | `diagnosis/02_investigate_totals.sql` | Why 2,398 order totals disagree with their lines |
 | `diagnosis/03_category_cycles.sql` | Cycles and orphans in the category tree |
 | `diagnosis/04_investigate_stock.sql` | Is the stock trail complete? |
-| `measurement/x01_export_baseline.sql` | Saves the 56 checks and row counts on the raw data as CSV (the "before") |
+| `diagnosis/05_profile.sql` | Column-by-column profile of the raw data: missing values, distinct values, ranges, formats (no personal data in the output) |
+| `measurement/x01_export_baseline.sql` | Saves the 56 checks, the column profile and row counts on the raw data as CSV (the "before") |
 | `measurement/x50_monday_report_before.sql` | The slow "before" version of the report, timed, with its query plan |
 | `measurement/x80_measure.sql` | Timed runs of each report, with query plans (the "after") |
 | `measurement/x90_export_results.sql` | Saves the checks, row counts, cleanup summary, data health and median/p95/worst timings as CSV (the "after"), plus confidential report exports to `results/client_data/` |
@@ -148,7 +149,7 @@ docker exec -w /lab -i -e PAGER=cat kloudkart psql -U postgres -f measurement/x8
 
 | File | Deliverable |
 |---|---|
-| `docs/data_findings.md` | 1. Data diagnosis: 15 findings ranked by risk |
+| `docs/data_findings.md` | 1. Data diagnosis: 16 findings ranked by risk |
 | `sql/` (run by `sql/00_run_all.sql`) | 2. Working SQL solution; `race_test.py` passes unmodified |
 | `decisions/ADR-001` … `ADR-006` | 3. Key decisions, including whether triggers alone would have worked |
 | `docs/client_memo.md` | 4. One-page memo to Nana |
