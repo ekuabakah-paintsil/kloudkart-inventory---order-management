@@ -1,5 +1,5 @@
 rule,breaches,action
-products whose stock does not match their trail,144,count these products; investigate changes made outside place_order
+products whose stock does not match their trail,113,count these products; investigate changes made outside place_order
 products with negative stock,0,should be impossible: a database rule now refuses it
 categories that never reach a top-level department,2,give the category a real parent; its products are missing from the low-stock view
 order lines with no price,299,historical only; new lines always carry a price

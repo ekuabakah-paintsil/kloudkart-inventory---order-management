@@ -1,7 +1,9 @@
 finding,action,rows
+F-01,apply recount logged but not applied,31
 F-02,merge duplicate listing,23
 F-03,reset negative stock to 0,14
 F-04,normalise status,1
 F-05,move order to surviving customer,2121
 F-14,left for review: total does not imply a whole quantity,1
 F-14,set quantity from order total,5
+F-16,normalise city spelling,1

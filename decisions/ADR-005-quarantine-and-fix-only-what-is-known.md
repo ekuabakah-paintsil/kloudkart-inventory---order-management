@@ -11,9 +11,9 @@ The diagnosis found fifteen faults (`docs/data_findings.md`). The rules that pre
 ## Decision
 
 Each fault gets one of three treatments, decided by whether the correct value is known:
-- **Fix in place** where the right value is certain: status spellings (F-04), duplicate customers merged into one record (F-05), duplicate product listings merged (F-02), negative stock reset to 0 with a recorded correction (F-03), placeholder quantities set to what the order total implies (F-14).
+- **Fix in place** where the right value is certain: status spellings (F-04), duplicate customers merged into one record (F-05), duplicate product listings merged (F-02), negative stock reset to 0 with a recorded correction (F-03), placeholder quantities set to what the order total implies (F-14), recounts already in the stock log but never applied, for the 31 products where the gap proves it (F-01), and city spellings (F-16).
 - **Quarantine**, meaning move to a `quarantine_*` table with the finding and reason, where the row is broken and cannot be repaired: orders with no customer (F-06), orders dated after the extract ends (F-10), lines with no order (F-12), double-inserted lines (F-11), movements for missing products (F-07), the empty orphan category (F-15).
-- **Leave and document** where the right value is unknown: stock that disagrees with its trail (F-01), the category loop (F-08), the unexplained total mismatches (F-09), lost prices (F-13).
+- **Leave and document** where the right value is unknown: the other 113 products whose stock disagrees with their trail (F-01), the category loop (F-08), the unexplained total mismatches (F-09), lost prices (F-13).
 
 Every in-place change is recorded in `data_fix_log`. Nothing is deleted outright.
 

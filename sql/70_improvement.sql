@@ -5,7 +5,8 @@
 -- The problem: Nana's complaint was that stock counts "no longer match reality", and
 -- nobody could say which products or since when. The diagnosis found 144 such products
 -- (F-01) only by comparing each product's stock with the sum of its recorded movements.
--- The cleanup cannot fix them, because the data cannot say which side is right.
+-- The cleanup fixes only 31 (recounts the log held but never applied); for the other
+-- 113 the data cannot say which side is right.
 --
 -- THE IDEA IN ONE SENTENCE
 --   If the trail is complete, every product's stock should equal the sum of its movements
@@ -19,7 +20,7 @@
 --                       count, or a change made outside place_order.
 --   * v_data_health   - one row per rule that matters to Nana, with today's count of
 --                       breaches, so the faults found in this audit are seen if they return.
--- Worth to Nana: the 144 products become a counting list for the warehouse, and the next
+-- Worth to Nana: the 113 remaining products become a counting list for the warehouse, and the next
 -- drift is caught the week it happens instead of after the next oversell.
 -- (Full write-up: docs/improvement.md.)
 --

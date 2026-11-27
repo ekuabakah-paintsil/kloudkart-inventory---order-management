@@ -96,7 +96,8 @@ All checks below have been written and run (diagnosis/01–04).
 - orders: date range of the extract
 - orders with no order_items lines
 - units sold in order lines vs units logged as sales, by status
-- (not yet done) read the ~425 non-null inventory notes
+- read the 425 non-null inventory notes: 6 phrases, all on corrections (see Data profile)
+- column profile of every table (diagnosis/05_profile.sql)
 
 ## Judgement calls
 - Negative inventory_log.change_qty is an outward movement, not a fault. Source: schema comment.
@@ -118,6 +119,8 @@ All checks below have been written and run (diagnosis/01–04).
 - Decided (ADR-003): refunded and cancelled orders do not count as spend; pending, shipped and completed do. Flagged to Nana as an assumption to confirm.
 - Decided (ADR-003): the 12 months end with the month of the latest order on or before today. That is Aug 2026 on this extract and the current month on live data, so neither gives empty months.
 - Optional: a sanity cap on order_items.quantity (all real lines ≤ 20).
+- Recounts noted "recount, not applied" are applied only where the gap equals the recount exactly AND the result is not negative (31 of 40). A recount that would leave negative stock means the log is short of movements too, so the right figure is not known.
+- City spellings are fixed like status (only capitals and spaces differ); phone layouts are not (fixing them means guessing digits).
 - inventory_log.reason is free text but has stayed clean (6 values, correct signs): no fix needed beyond an optional CHECK.
 - 90 stock_take rows with zero change: can't tell if takes found no difference or adjustments weren't logged. Stated, not reported as a fault.
 - Stock moves only for completed and shipped orders. Refunded orders (21,531 units) have no sale movement and returns total only 1,017 units, so assumed refunded before shipping.
@@ -125,6 +128,20 @@ All checks below have been written and run (diagnosis/01–04).
 - place_order will deduct stock at placement (required by race_test), changing today's behaviour of deducting at fulfilment. Cancelling an order must return the stock with a log row. Goes in the concurrency decision record.
 - The orphan category has nothing below it: no current cost, ranked lowest.
 - Order volume grew from ~70/day (Aug 2025) to ~1,170/day (Aug 2026); performance figures measured on this extract understate the load at the brief's 4,000/day.
+
+## Data profile
+
+Column-by-column profile of the raw load (`diagnosis/05_profile.sql`, saved as `results/profile_before.csv`; text columns reported as lengths, so no personal data).
+
+- **Ranges match the story:** orders 2 Aug 2025 – 20 Aug 2027 (the tail is F-10); prices GH₵5.04–21,961.78; order totals GH₵3.51–227,750.97; stock −4 to 400 (negatives are F-03); stock movements −10 to +82.
+- **Ids reveal the orphans:** real customers 100,001–140,420, but orders reference up to 999,997; real orders end at 659,384, but lines reference up to 999,862; real products end at 9,023, but the stock log references up to 99,999. Orphans point at ids that never existed, not at deleted rows.
+- **Customers and products stop on 2 Aug 2025,** the day orders start: no registrations or new products during the order year.
+- **Emails:** none malformed; 1,314 have stray spaces and 2,183 capitals (together the 3,220 the cleanup normalised).
+- **Cities:** 15 values, but Accra is written 4 ways (10,731 customers, 27%); 12 real cities, 2 of them in Nigeria (F-16; normalised by sql/10).
+- **Phones:** 5 layouts; 40,418 distinct of 40,420 (2 shared numbers, expected).
+- **Names:** only 2,552 distinct names among 40,420 customers: names are shared, so a name alone never identifies a duplicate.
+- **Quantities:** 7 distinct values, including 999 and 9999 (F-14).
+- **Notes:** 425 filled, 6 phrases, all on `correction` movements: "counted by hand" 86, "see WhatsApp msg" 80, "??" 76, "POS mismatch" 74, "adjusted after complaint" 69, "recount, not applied" 40.
 
 ## Measurements
 
@@ -196,9 +213,15 @@ All checks below have been written and run (diagnosis/01–04).
 | 24 Nov | orders with no customer: value | fresh load | 210 orders, GH₵665,180.61 | revenue no customer total includes |
 | 24 Nov | cancelled orders: value, all spellings vs naive filter | fresh load | GH₵38,163,973.23 vs GH₵9,396,828.73 | naive filter misses GH₵28,767,144.50 (75% by value) |
 | 27 Nov | Row counts after cleanup | sql/00_run_all.sql | categories 93, products 4,000, customers 39,885, orders 159,150, order_items 334,812, inventory_log 282,246 | every difference explained in the Reconciliation table (data_findings.md) |
-| 27 Nov | Integrity checks after cleanup | sql/00_run_all.sql | every fault fixed or quarantined shows 0; left by decision: cycle 2, stock drift 144, total ≠ lines 1,864, NULL price 148, zero price 151, placeholder 1 | log dated after extract end 40 → 54: the 14 F-03 correction rows, dated at cleanup |
+| 27 Nov | Integrity checks after cleanup | sql/00_run_all.sql | every fault fixed or quarantined shows 0; left by decision: cycle 2, stock drift 113 (144 before the recount fix), total ≠ lines 1,864, NULL price 148, zero price 151, placeholder 1 | log dated after extract end 40 → 54: the 14 F-03 correction rows, dated at cleanup |
 | 27 Nov | Monday report before (500 customers) | raw load, measurement/x50 | 38.5 s; plan 37,937 ms; 7,000 full scans of orders | scaled to all customers: about 52 min |
 | 27 Nov | Monday report after | measurement/x90, 10 runs | median 872 ms, p95 1,041, worst 1,096; top 100 135 ms; running total 294 ms | plan: orders read once, 914.664 ms |
 | 27 Nov | Low-stock rollup | measurement/x90, 10 runs | median 5.1 ms, worst 6.0 ms | plan 8.128 ms |
 | 27 Nov | race_test.py, unmodified | after sql/00_run_all.sql | PASSED: test 1 25/25; test 2 50 sold, 350 refused, 0 errors, 3.48 s; test 3 refused cleanly; test 4 5 sold, 6 movements | 6 movements = opening stock + 5 sales |
-| 27 Nov | v_data_health | after race test | drift 144, negative 0, rootless categories 2, unpriced lines 299, total ≠ lines 1,864, future orders 0 | race test added no drift |
+| 27 Nov | v_data_health | after race test | drift 113, negative 0, rootless categories 2, unpriced lines 299, total ≠ lines 1,864, future orders 0 | race test added no drift |
+| 27 Nov | Column profile, all 31 columns | raw load, diagnosis/05_profile.sql | results/profile_before.csv | summarised under Data profile |
+| 27 Nov | City spellings | customers + quarantined customers | 15 values; Accra 4 ways: accra 2,769 / ACCRA 2,727 / Accra 2,622 / Accra (hidden space) 2,613 = 10,731 (27%) | F-16; results/profile_values.csv |
+| 27 Nov | Stock-log notes | inventory_log + quarantined movements | 425 notes, 6 phrases | results/profile_values.csv |
+| 27 Nov | Notes vs drifting products | after cleanup, v_stock_drift | "recount, not applied": 40 of 40 products drifting; WhatsApp 7 of 80; counted by hand 5 of 86; POS mismatch 4 of 74; ?? 2 of 76; adjusted after complaint 0 of 69 | explains 40 of the 144 (F-01); results/notes_vs_drift.csv |
+| 27 Nov | Recount products: gap vs unapplied recount | after cleanup | 40 products: 39 gaps equal the recount exactly, 0 reversed; of the 39, 8 have a negative trail total (applying would make stock negative) | 31 applied by sql/10; 9 left for the count |
+| 27 Nov | After recount and city fixes | sql/00_run_all.sql | F-01 recounts applied 31; drift 144 → 113; cities 15 spellings → 12; every other check and row count unchanged | results/cleanup_fix_summary.csv, integrity_checks_after.csv, data_health.csv |

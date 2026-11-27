@@ -6,12 +6,12 @@
 --   Works through the findings in docs/data_findings.md (F-01 … F-15) and gives each
 --   one of three treatments (decision record ADR-005):
 --     FIX IN PLACE   only when the correct value is certain
---                    (F-02, F-03, F-04, F-05, F-14)
+--                    (F-02, F-03, F-04, F-05, F-14, F-16, and 31 products of F-01)
 --     QUARANTINE     move broken rows that can't be repaired into a quarantine_* table,
 --                    labelled with the finding and the reason
 --                    (F-06, F-07, F-10, F-11, F-12, F-15)
 --     LEAVE          when nobody can know the correct value; documented instead
---                    (F-01, F-08, F-09, F-13)
+--                    (the rest of F-01, F-08, F-09, F-13)
 --
 -- TWO PROMISES THIS FILE KEEPS
 --   1. Nothing is deleted outright. Before a row leaves a live table, it is copied to a
@@ -373,6 +373,65 @@ FROM   products WHERE stock_quantity < 0;
 UPDATE products SET stock_quantity = 0 WHERE stock_quantity < 0;
 
 -- =============================================================================
+-- F-01 (part)  Recounts logged but never applied  ->  FIX where the gap proves it
+-- =============================================================================
+-- 40 products carry a 'correction' movement whose note says "recount, not applied": the
+-- warehouse counted the product, the correction went into the log, but the stock figure
+-- was never changed. The log then says one thing and the stock figure another.
+--
+-- If that is the WHOLE story for a product, its gap is exactly the unapplied correction:
+--     stock on record - sum of its movements = - (the correction's change_qty)
+-- For those products the correct stock is known (the recount), so it is applied: stock
+-- becomes the sum of its movements. On Kloud Kart's data the gap matches for 39 of the 40,
+-- but for 8 of them the log's own total is below zero, so applying it would make stock
+-- negative: the log is missing movements too, and the rule below refuses them.
+-- Result: 31 applied; the other 9 are left for the physical count.
+-- No new movement is written: the recount is already in the log; only the figure that
+-- ignored it changes. Afterwards stock = sum of movements again, so the trail explains it.
+-- Runs after F-02 and F-07, so the movement sums are already on the merged, clean products.
+CREATE TEMP TABLE recount_fix AS
+WITH moves AS (
+    SELECT product_id, sum(change_qty) AS trail_quantity
+    FROM   inventory_log GROUP BY product_id
+)
+SELECT p.product_id, p.stock_quantity AS old_stock, m.trail_quantity AS new_stock
+FROM   products p
+JOIN   moves m          ON m.product_id  = p.product_id
+JOIN   inventory_log il ON il.product_id = p.product_id AND il.note = 'recount, not applied'
+WHERE  p.stock_quantity - m.trail_quantity = -il.change_qty   -- the gap IS the unapplied recount
+AND    m.trail_quantity >= 0                                   -- never set a negative stock
+-- Only products with exactly one such note, so the rule above is unambiguous.
+AND    (SELECT count(*) FROM inventory_log x
+        WHERE x.product_id = p.product_id AND x.note = 'recount, not applied') = 1;
+
+INSERT INTO data_fix_log (finding, table_name, row_id, action, detail)
+SELECT 'F-01', 'products', product_id, 'apply recount logged but not applied',
+       'stock ' || old_stock || ' -> ' || new_stock
+FROM   recount_fix;
+
+UPDATE products p SET stock_quantity = f.new_stock
+FROM   recount_fix f WHERE f.product_id = p.product_id;
+
+-- =============================================================================
+-- F-16  City written several ways ('accra', 'ACCRA', 'Accra', 'Accra ')  ->  FIX IN PLACE
+-- =============================================================================
+-- Accra is written four ways: capitals and a hidden space. The correct value is never in
+-- doubt, the same situation as the order statuses (F-04), so it is rewritten.
+--   translate(…)  turns invisible spaces (non-breaking U+00A0, zero-width U+200B and
+--                 U+FEFF) into ordinary spaces, which trim then removes
+--   trim(…)       removes spaces at either end
+--   initcap(…)    capital first letter of each word: 'accra' -> 'Accra', 'cape coast' -> 'Cape Coast'
+-- The other 11 cities are already written this way, so only the Accra variants change.
+WITH fixed AS (
+    UPDATE customers
+    SET    city = initcap(trim(translate(city, U&'\00A0\200B\FEFF', '   ')))
+    WHERE  city IS DISTINCT FROM initcap(trim(translate(city, U&'\00A0\200B\FEFF', '   ')))
+    RETURNING 1
+)
+INSERT INTO data_fix_log (finding, table_name, action, detail)
+SELECT 'F-16', 'customers', 'normalise city spelling', count(*) || ' customers rewritten' FROM fixed;
+
+-- =============================================================================
 -- F-15  A category whose parent doesn't exist  ->  QUARANTINE (it is empty)
 -- =============================================================================
 -- One category points at a missing parent. It has no subcategories and no products, so
@@ -391,7 +450,8 @@ DELETE FROM categories WHERE category_id IN (SELECT category_id FROM quarantine_
 -- =============================================================================
 -- LEFT AS THEY ARE, BY DECISION (ADR-005): the correct value is unknown
 -- =============================================================================
--- F-01 stock vs movements: which side is right is unknown -> flagged by v_stock_drift (70).
+-- F-01 stock vs movements (all but the 31 recounts above): which side is right is
+--      unknown -> flagged by v_stock_drift (70) for a physical count.
 -- F-08 category cycle: the correct parent is unknown -> rollup guards against it (60).
 -- F-09 unexplained total mismatches: correct value unknown -> spend uses total_amount.
 -- F-13 lost prices: correct price unknown -> spend uses total_amount.
@@ -418,3 +478,6 @@ ORDER BY 1, 2;
 
 -- How many in-place changes each finding made.
 SELECT finding, action, count(*) AS rows FROM data_fix_log GROUP BY 1, 2 ORDER BY 1, 2;
+
+-- F-16 check: after the fix there should be one spelling per city (12 cities).
+SELECT count(DISTINCT city) AS distinct_cities FROM customers;

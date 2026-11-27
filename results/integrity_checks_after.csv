@@ -2,7 +2,7 @@ check_name,failing_rows
 consistency: categories in a cycle,2
 consistency: categories self-parent,0
 consistency: orders with no order_items,0
-consistency: products where stock <> sum of movements,144
+consistency: products where stock <> sum of movements,113
 consistency: total_amount <> sum of lines,1864
 date: customers.registered_at after extract end (assumed 2026-08-31),0
 date: inventory_log.created_at after extract end (assumed 2026-08-31),54

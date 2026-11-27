@@ -2,7 +2,7 @@
 
 ## The problem it solves
 
-Nana's complaint was that his stock counts "no longer match reality closely enough to trust", and nobody could say which products, by how much, or since when. The audit found the answer, 144 products whose stock does not equal the sum of their recorded movements (F-01), but only through a one-off investigation. The cleanup could not fix them, because the data cannot say whether the shelf figure or the history is wrong. Without something standing, the next drift would be discovered the same way the last ones were: after an oversell.
+Nana's complaint was that his stock counts "no longer match reality closely enough to trust", and nobody could say which products, by how much, or since when. The audit found the answer, 144 products whose stock does not equal the sum of their recorded movements (F-01), but only through a one-off investigation. The cleanup could fix only the 31 where the log held a recount that was never applied; for the rest, the data cannot say whether the shelf figure or the history is wrong. Without something standing, the next drift would be discovered the same way the last ones were: after an oversell.
 
 The same is true of the other faults found: the new rules stop most of them, but a few (a category loop, a change to stock made outside order placement, a future-dated order) can still happen and would again go unnoticed.
 
@@ -15,11 +15,11 @@ The same is true of the other faults found: the new rules stop most of them, but
 
 Supporting changes make the watch trustworthy from day one: a new product's opening stock is recorded automatically as its first movement (sql/30), and every sale and cancellation records its movement in the same step as the stock change (sql/40). So a product added or sold through the normal route never appears as drift; anything that does appear was changed some other way.
 
-Checked on the real extract: the same comparison counted 144 products on the raw load, the watch showed 144 after cleanup, and still 144 after `race_test.py` created test products and sold them to 400 simultaneous buyers (`results/data_health.csv`). The fixes and the new order route added no drift. During development, a product whose stock was changed directly appeared on the list immediately.
+Checked on the real extract: the same comparison counted 144 products on the raw load; after the cleanup applied 31 logged recounts, the watch showed 113, and still 113 after `race_test.py` created test products and sold them to 400 simultaneous buyers (`results/data_health.csv`). The fixes and the new order route added no drift. During development, a product whose stock was changed directly appeared on the list immediately.
 
 ## What it is worth to Nana
 
-- **A counting list today.** The 144 products become a concrete job for the warehouse: count these, sorted by the size of the gap. The count settles which side was wrong and closes F-01.
+- **A counting list today.** The 113 remaining products become a concrete job for the warehouse: count these, sorted by the size of the gap. The count settles which side was wrong and closes F-01.
 - **Early warning afterwards.** Any stock change made outside order placement shows up the day it happens, not after the next oversell. Each oversell cost a refund, an apology and reviews that cannot be undone; one avoided during a flash sale pays for the feature.
 - **One place to look.** `SELECT * FROM v_data_health;` answers "is the data still clean?" in a single line, without re-running the audit. For Adwoa, it is a check to run before trusting a Monday report.
 

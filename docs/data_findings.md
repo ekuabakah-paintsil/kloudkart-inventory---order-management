@@ -1,10 +1,10 @@
 # Data findings — Kloud Kart Ltd.
 
-> Every figure below comes from a fresh load of the extract and can be reproduced with `diagnosis/01_integrity_checks.sql` (one row per check) and the investigation scripts `diagnosis/02`–`04`.
+> Every figure below comes from a fresh load of the extract and can be reproduced with `diagnosis/01_integrity_checks.sql` (one row per check), the investigation scripts `diagnosis/02`–`04` and the column profile `diagnosis/05_profile.sql`.
 
 ## Summary
 
-The extract covers August 2025 to August 2026: 159,384 orders, 40,420 customer records and 4,023 products. Most of it is sound: 156,882 orders agree exactly with their lines, 3,879 of 4,023 products reconcile exactly with their stock movements, and the stock trail matches fulfilled orders to within 70 units. The dangerous faults are few but sit exactly where Nana's decisions rest. Stock counts are wrong for 144 products and split across duplicate listings for 23 more, which undermines any no-overselling guarantee. Order status is written 15 different ways, so a report that "excludes cancelled orders" in the obvious way still counts GH₵28.8 million of cancelled orders as customer spending. 533 customers are registered twice, which splits their spending and distorts the top-100 ranking. None of these faults raises an error; each produces a plausible, wrong number.
+The extract covers August 2025 to August 2026: 159,384 orders, 40,420 customer records and 4,023 products. Most of it is sound: 156,882 orders agree exactly with their lines, 3,879 of 4,023 products reconcile exactly with their stock movements, and the stock trail matches fulfilled orders to within 70 units. The dangerous faults are few but sit exactly where Nana's decisions rest. Stock counts are wrong for 144 products (31 of them corrected from recounts the stock log already held) and split across duplicate listings for 23 more, which undermines any no-overselling guarantee. Order status is written 15 different ways, so a report that "excludes cancelled orders" in the obvious way still counts GH₵28.8 million of cancelled orders as customer spending. 533 customers are registered twice, which splits their spending and distorts the top-100 ranking. None of these faults raises an error; each produces a plausible, wrong number.
 
 **Severity scale**
 
@@ -37,11 +37,11 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 ### F-01: Stock counts do not match the stock trail — Severity: Critical
 
 - **What it is:** For 144 products, the stock figure on the product does not equal the sum of that product's recorded stock movements. No rule ties the two together.
-- **How I detected it:** Summed `inventory_log.change_qty` per product and compared it with `products.stock_quantity` (check `consistency: products where stock <> sum of movements`; `diagnosis/04_investigate_stock.sql` query 2).
-- **Scale:** 144 of 4,023 products (3.6%). 122 hold less stock than their movements imply (−2,464 units); 22 hold more (+89 units). Net 2,375 units unaccounted for. The other 3,879 products reconcile exactly.
+- **How I detected it:** Summed `inventory_log.change_qty` per product and compared it with `products.stock_quantity` (check `consistency: products where stock <> sum of movements`; `diagnosis/04_investigate_stock.sql` query 2). Then matched the 425 notes in the stock log against the drifting products (`results/notes_vs_drift.csv`).
+- **Scale:** 144 of 4,023 products (3.6%). 122 hold less stock than their movements imply (−2,464 units); 22 hold more (+89 units). Net 2,375 units unaccounted for. The other 3,879 products reconcile exactly. The log's own notes point to a cause: 40 products carry a correction noted "recount, not applied", and **all 40 are among the 144**: the recount was logged but, as the note says, never applied to the stock figure. 18 more drifting products carry other notes ("see WhatsApp msg" 7, "counted by hand" 5, "POS mismatch" 4, "??" 2); the rest have no note. Of the 40, 31 have a gap exactly the size of the unapplied recount. In 8 more, applying it would take stock below zero, because the log's own total for them is already negative (movements, such as a restock, are missing from the log too). In 1 the gap differs from the recount.
 - **Effect on the client's number:** The order-placement fix can only protect the number it is given. For the 22 overstated products, a perfectly locked order can still sell up to 89 units that may not exist; for the 122 understated products, real stock is refused or unrecorded losses go unnoticed. This is the "stock counts no longer match reality" Nana describes, located and sized.
-- **What I did about it:** Left the stock figures unchanged: the data cannot say whether the shelf count or the trail is wrong, and resetting either would be guessing (ADR-005). Built `v_stock_drift` (sql/70), which lists every product whose stock does not match its trail, by how much and when it last moved: a ready-made counting list for the warehouse.
-- **Residual risk:** Until the 144 products are physically counted, their stock figures may be wrong, so `place_order` protects a number that may not match the shelf. Drift from any new cause appears in `v_stock_drift` and `v_data_health` the day it happens.
+- **What I did about it:** Applied the recount to the 31 products where the gap is exactly the unapplied recount and the result is not negative: their stock now equals their trail, and each change is in `data_fix_log` (sql/10). Left the other 113 unchanged: the data cannot say whether the shelf count or the trail is wrong, and resetting either would be guessing (ADR-005). Built `v_stock_drift` (sql/70), which lists every product whose stock does not match its trail, by how much and when it last moved: a ready-made counting list for the warehouse.
+- **Residual risk:** 113 products still drift after cleanup. The count can start with the 9 remaining "recount, not applied" products, which the log alone could not settle. Until the 113 products are physically counted, their stock figures may be wrong, so `place_order` protects a number that may not match the shelf. Drift from any new cause appears in `v_stock_drift` and `v_data_health` the day it happens.
 
 ### F-02: The same product is listed twice, and both listings sell — Severity: Critical
 
@@ -84,7 +84,7 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 
 - **What it is:** Orders whose `customer_id` points at a customer that does not exist. No foreign key.
 - **How I detected it:** Anti-join from `orders` to `customers` (check `orphan: orders.customer_id → customers`).
-- **Scale:** 210 of 159,384 orders, worth GH₵665,180.61.
+- **Scale:** 210 of 159,384 orders, worth GH₵665,180.61. The missing customer ids go up to 999,997, far outside the range of real ids (100,001–140,420), so they look like placeholder ids rather than deleted customers.
 - **Effect on the client's number:** Real revenue that appears in no customer's total, no top-100 position and no per-customer monthly figure.
 - **What I did about it:** Moved the 210 orders and their lines to `quarantine_orders` / `quarantine_order_items` (kept, not deleted), then made every order require an existing customer (sql/10, sql/20).
 - **Residual risk:** GH₵665,180.61 of revenue is outside the customer report until someone identifies the customers. New orders cannot be created without a valid customer.
@@ -93,7 +93,7 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 
 - **What it is:** Inventory log rows pointing at missing products. No foreign key.
 - **How I detected it:** Anti-join from `inventory_log` to `products` (check `orphan: inventory_log.product_id → products`).
-- **Scale:** 120 of 282,352 movements.
+- **Scale:** 120 of 282,352 movements. They point at product ids up to 99,999, while real products end at 9,023.
 - **Effect on the client's number:** Entries in the audit trail that no auditor can tie to a product, which undermines the "proof of what happened" Nana asked for.
 - **What I did about it:** Moved the 120 movements to `quarantine_inventory_log`, then made every movement require an existing product (sql/10, sql/20). All movements are now protected by the archive trigger (ADR-004).
 - **Residual risk:** The 120 movements stay unexplained. New ones cannot point at a missing product.
@@ -138,7 +138,7 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 
 - **What it is:** Lines whose `order_id` points at an order that does not exist. No foreign key.
 - **How I detected it:** Anti-join from `order_items` to `orders` (check `orphan: order_items.order_id → orders`).
-- **Scale:** 692 of 336,559 lines.
+- **Scale:** 692 of 336,559 lines. They point at order ids up to 999,862, while real orders end at 659,384.
 - **Effect on the client's number:** Dropped by any report that joins lines to orders. Customer spend is unaffected; per-product sales are slightly off.
 - **What I did about it:** Moved the 692 lines to `quarantine_order_items`, then made every line require an existing order (sql/10, sql/20).
 - **Residual risk:** None for new lines.
@@ -171,6 +171,15 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 - **What I did about it:** Moved the empty category to `quarantine_categories` and made every category's parent a real category (sql/10, sql/20).
 - **Residual risk:** None.
 
+### F-16: City names and phone numbers written inconsistently — Severity: Low
+
+- **What it is:** `city` and `phone` are free text with no rule on format.
+- **How I detected it:** The column profile (`diagnosis/05_profile.sql`) showed 15 distinct cities with a lowercase "accra" the most common; listing them (`results/profile_values.csv`) showed four spellings of Accra. Phone digits were masked to compare layouts without exposing any number.
+- **Scale:** Accra is written "accra" (2,769), "ACCRA" (2,727), "Accra" (2,622) and "Accra" with an invisible space (2,613): 10,731 customers, 27% of all, against about 2,650–2,750 for each other city. The other 11 cities are spelled consistently. Phone numbers come in 5 layouts (for example `+233…`, nine digits without the leading 0, and spaced 3-3-4).
+- **Effect on the client's number:** None of Nana's four criteria uses city or phone. Any report by city would show Kloud Kart's largest market, four times bigger than any other, as four average cities; mixed phone layouts cannot be matched or messaged reliably.
+- **What I did about it:** Rewrote every city to one spelling, as for status (F-04): only capitals and spaces differ, so the correct value is never in doubt. Logged in `data_fix_log` (sql/10); 12 cities remain. Phone numbers were left as delivered: changing a layout would mean guessing a missing digit or country code.
+- **Residual risk:** New entries can still be inconsistent until a rule or a list of allowed cities is added. Phone layouts stay mixed.
+
 ## Looked wrong, is not wrong
 
 | Apparent problem | Why it looks wrong | Why it is actually fine |
@@ -195,4 +204,6 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 - **The time zone of stored timestamps:** none is recorded. Assumed Accra time (UTC+0), which makes the missing zone harmless today.
 - **The cause of the 23 duplicate listings (F-02):** the IDs are contiguous but creation dates span three years.
 - **The extract end date:** assumed 31 August 2026, the last month with real order volume.
-- **About 425 inventory notes** have not been read; they may explain some corrections.
+- **What the stock-log notes mean:** all 425 notes use six phrases, all on correction movements. "recount, not applied" marks 40 drifting products, 31 of which were corrected (F-01). "see WhatsApp msg" (80) and "??" (76) show reasons kept outside the system, which cannot be checked.
+- **Customer and product tables end on 2 August 2025,** the day orders begin: no customer registered and no product was created during the order year, although orders grew sixteenfold. The two tables look like snapshots taken at the start of the extract; not provable from the data.
+- **Customers in Abuja and Lagos (Nigeria):** 5,406 customers (13%). Plausible if Kloud Kart ships there; not checked with the business.
