@@ -4,7 +4,7 @@
 --
 -- WHAT THIS FILE DOES
 --   Works through the findings in docs/data_findings.md (F-01 … F-15) and gives each
---   one of three treatments (decision record ADR-006):
+--   one of three treatments (decision record ADR-005):
 --     FIX IN PLACE   only when the correct value is certain
 --                    (F-02, F-03, F-04, F-05, F-14)
 --     QUARANTINE     move broken rows that can't be repaired into a quarantine_* table,
@@ -387,7 +387,7 @@ AND    NOT EXISTS (SELECT 1 FROM products  pr WHERE pr.category_id = c.category_
 DELETE FROM categories WHERE category_id IN (SELECT category_id FROM quarantine_categories);
 
 -- =============================================================================
--- LEFT AS THEY ARE, BY DECISION (ADR-006): the correct value is unknown
+-- LEFT AS THEY ARE, BY DECISION (ADR-005): the correct value is unknown
 -- =============================================================================
 -- F-01 stock vs movements: which side is right is unknown -> flagged by v_stock_drift (70).
 -- F-08 category cycle: the correct parent is unknown -> rollup guards against it (60).
