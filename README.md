@@ -18,7 +18,7 @@ PostgreSQL server: no new infrastructure, no new cost.
 
 - Docker Desktop
 - Python 3 with `psycopg2-binary` (for `race_test.py`)
-- The Evalu8 data bundle (not included in this repository; see below)
+- The `data/` folder from the Evalu8 bundle (confidential, not committed; see below)
 
 ## Setup
 
@@ -163,7 +163,7 @@ Each is explained, with what it costs if wrong, in `decisions/`.
 
 ## Notes
 
-- The data bundle is confidential and never committed. `.gitignore` excludes `data/`, `*.csv` and the bundle files.
+- The client data is confidential and never committed. `.gitignore` excludes `data/`, every CSV except the summary files directly in `results/`, and the customer-level exports in `results/client_data/`. The bundle's scripts (`schema.sql`, `load.sql`, `race_test.py`) are committed unmodified so the build runs from a fresh clone.
 - No connection strings or passwords are hard-coded in scripts; Python reads `DATABASE_URL` from the environment.
 
 ## AI use
