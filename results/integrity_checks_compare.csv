@@ -1,0 +1,57 @@
+check_name,before,after,change
+consistency: categories in a cycle,2,2,0
+consistency: categories self-parent,0,0,0
+consistency: orders with no order_items,0,0,0
+consistency: products where stock <> sum of movements,144,144,0
+consistency: total_amount <> sum of lines,2398,1864,-534
+date: customers.registered_at after extract end (assumed 2026-08-31),0,0,0
+date: inventory_log.created_at after extract end (assumed 2026-08-31),40,54,14
+date: order placed before customer registered,0,0,0
+date: orders.order_date after extract end (assumed 2026-08-31),24,0,-24
+date: products.created_at after extract end (assumed 2026-08-31),0,0,0
+"duplicate (review): order_items (order_id, product_id) (groups)",616,78,-538
+"duplicate (review): order_items (order_id, product_id) (rows)",1233,156,-1077
+"duplicate (review): products (name, category) (groups)",400,384,-16
+"duplicate (review): products (name, category) (rows)",829,790,-39
+"duplicate: categories (parent_id, name) (groups)",0,0,0
+"duplicate: categories (parent_id, name) (rows)",0,0,0
+duplicate: customers.email (groups),533,0,-533
+duplicate: customers.email (rows),1068,0,-1068
+impossible: order_items.quantity <= 0,0,0,0
+impossible: order_items.quantity is placeholder (999/9999),6,1,-5
+impossible: order_items.unit_price <= 0,152,151,-1
+impossible: orders.total_amount <= 0,0,0,0
+impossible: products.price <= 0,0,0,0
+impossible: products.stock_quantity < 0,14,0,-14
+null (fault): categories.category_name,0,0,0
+null (fault): inventory_log.product_id,0,0,0
+null (fault): order_items.order_id,0,0,0
+null (fault): order_items.product_id,0,0,0
+null (fault): order_items.quantity,0,0,0
+null (fault): order_items.unit_price,148,148,0
+null (fault): orders.customer_id,0,0,0
+null (fault): orders.total_amount,0,0,0
+null (fault): products.price,0,0,0
+null (fault): products.stock_quantity,0,0,0
+null (info): categories.parent_id,7,7,0
+null (info): customers.city,0,0,0
+null (info): customers.email,0,0,0
+null (info): customers.full_name,0,0,0
+null (info): customers.phone,0,0,0
+null (info): customers.registered_at,0,0,0
+null (info): inventory_log.change_qty,0,0,0
+null (info): inventory_log.created_at,0,0,0
+null (info): inventory_log.note,281927,281807,-120
+null (info): inventory_log.reason,0,0,0
+null (info): orders.order_date,0,0,0
+null (info): orders.status,0,0,0
+null (info): products.category_id,37,37,0
+null (info): products.created_at,0,0,0
+null (info): products.product_name,0,0,0
+orphan: categories.parent_id → categories,1,0,-1
+orphan: inventory_log.product_id → products,120,0,-120
+orphan: order_items.order_id → orders,692,0,-692
+orphan: order_items.product_id → products,0,0,0
+orphan: orders.customer_id → customers,210,0,-210
+orphan: products.category_id → categories,0,0,0
+vocabulary: orders.status not in canonical 5,116394,0,-116394

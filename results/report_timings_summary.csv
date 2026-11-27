@@ -1,0 +1,5 @@
+query,runs,median_ms,p95_ms,worst_ms
+monday_report,10,872.27,1041.10,1095.85
+monday_report_running_total,10,294.07,309.61,309.71
+monday_report_top100,10,134.83,139.44,142.54
+v_low_stock_rollup,10,5.06,5.68,5.95

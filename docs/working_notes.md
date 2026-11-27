@@ -193,3 +193,5 @@ All checks below have been written and run (sql/01–04).
 | 24 Nov | consistency: categories in a cycle | fresh load | 2 (9001, 9002) | now tracked in 01 for before/after |
 | 24 Nov | consistency: products where stock <> sum of movements | fresh load | 144 | now tracked in 01 |
 | 24 Nov | vocabulary: orders.status not in canonical 5 | fresh load | 116,394 of 159,384 (73%) | only 42,990 spelled exactly right |
+| 24 Nov | orders with no customer: value | fresh load | 210 orders, GH₵665,180.61 | revenue no customer total includes |
+| 24 Nov | cancelled orders: value, all spellings vs naive filter | fresh load | GH₵38,163,973.23 vs GH₵9,396,828.73 | naive filter misses GH₵28,767,144.50 (75% by value) |

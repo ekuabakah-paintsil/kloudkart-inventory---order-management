@@ -1,0 +1,11 @@
+finding,moved_to,rows
+F-02,quarantine_products,23
+F-05,quarantine_customers,535
+F-06,quarantine_order_items,471
+F-06,quarantine_orders,210
+F-07,quarantine_inventory_log,120
+F-10,quarantine_order_items,48
+F-10,quarantine_orders,24
+F-11,quarantine_order_items,536
+F-12,quarantine_order_items,692
+F-15,quarantine_categories,1
