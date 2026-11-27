@@ -30,7 +30,7 @@
 --   1. "Time: …" for the 500-customer sample: multiply by (customers ÷ 500) for everyone.
 --   2. The query PLAN with real timings (EXPLAIN ANALYZE, Learning Path chapter 11).
 --      Look for the "SubPlan" lines and their "loops=500": each of the 14 lookups ran once
---      per customer. That is the expensive node, and it is the evidence for ADR-003.
+--      per customer. That is the expensive node, and it is the evidence for ADR-002.
 --   The sample runs twice (once timed, once explained), so allow about twice the time.
 
 -- A TEMP VIEW (exists only for this session) holds the naive query, so the same query
