@@ -8,7 +8,7 @@
 --   ROLLED UP means a category's numbers include everything beneath it, at every level:
 --   "Electronics" counts the low-stock cases inside Phone Accessories inside Phones.
 --
--- THE THREE TRAPS, AND HOW THIS FILE AVOIDS THEM (decision record ADR-007)
+-- THE THREE TRAPS, AND HOW THIS FILE AVOIDS THEM (decision record ADR-006)
 --   * No fixed depth: a recursive query walks the tree however deep marketing makes it.
 --   * Loop-proof: the CYCLE clause stops a walk the moment it revisits a category, so the
 --     9001 <-> 9002 loop (F-08) cannot make the rollup run forever. Categories that never
