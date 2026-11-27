@@ -102,7 +102,7 @@ UNION ALL SELECT 'inventory_log', count(*) FROM inventory_log;
 
 -- The same 56 checks that produced the baseline, run again on the fixed data.
 -- Faults that were fixed or quarantined should now show 0; the ones left by decision
--- (see ADR-006) still show their counts.
+-- (see ADR-005) still show their counts.
 \echo '== integrity checks after the fixes (compare with the baseline in working_notes.md)'
 \i diagnosis/01_integrity_checks.sql
 
