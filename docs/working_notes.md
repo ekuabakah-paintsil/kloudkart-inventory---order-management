@@ -46,7 +46,7 @@
 
 ## Checks I could write
 
-All checks below have been written and run (sql/01–04).
+All checks below have been written and run (diagnosis/01–04).
 
 **Orphans (missing FK)**
 - categories.parent_id → categories
@@ -113,10 +113,10 @@ All checks below have been written and run (sql/01–04).
 - Date checks use the extract end (assumed 2026-08-31), not now(): real data runs Aug 2025 – Aug 2026, then 24 stray on-the-minute orders.
 - Future dates and "order before registration" are checked by query rather than CHECK constraints: PostgreSQL advises against time-dependent CHECKs, and the second rule spans two tables.
 - 152 zero-price lines are NOT freebies: in 147 of 151 orders the total is higher than the lines, so the customer was charged and the price was lost. Rule unit_price > 0 stands.
-- 1,594 orders disagree with their lines by GH₵0.05–9,000 for no identified reason; which side is wrong cannot be determined from the data. Bounded, not resolved.
-- "Total spent" in the Monday report will come from orders.total_amount, not summed lines [your decision: confirm or change, and state the cost if wrong].
-- Monday report: do refunded orders count as spend? [your decision]
-- Monday report: trailing 12 months anchored at extract end (Aug 2026) or today? [your decision]
+- 1,594 orders disagree with their lines, by amounts from GH₵0.05 to over GH₵10,000, for no identified reason. 5 of them turned out to be placeholder-quantity orders (fixed by sql/10), leaving 1,589. Which side is wrong cannot be determined from the data. Bounded, not resolved.
+- Decided (ADR-003): "total spent" comes from orders.total_amount, not summed lines. The lines are damaged four ways (F-11 to F-14); the total agrees with them in 98.5% of orders. Cost if wrong: about 1% of orders (F-09).
+- Decided (ADR-003): refunded and cancelled orders do not count as spend; pending, shipped and completed do. Flagged to Nana as an assumption to confirm.
+- Decided (ADR-003): the 12 months end with the month of the latest order on or before today. That is Aug 2026 on this extract and the current month on live data, so neither gives empty months.
 - Optional: a sanity cap on order_items.quantity (all real lines ≤ 20).
 - inventory_log.reason is free text but has stayed clean (6 values, correct signs): no fix needed beyond an optional CHECK.
 - 90 stock_take rows with zero change: can't tell if takes found no difference or adjustments weren't logged. Stated, not reported as a fault.
@@ -152,7 +152,7 @@ All checks below have been written and run (sql/01–04).
 | 24 Nov | duplicate (review): products (name, category) | fresh load | 400 groups / 829 rows | of 4,023 products |
 | 24 Nov | product name groups: same price? | fresh load | 384 different / 16 same | price alone does not separate duplicates from variants (see ID ≥ 9000 rows) |
 | 24 Nov | products with ID ≥ 9000 | fresh load | 24 (9000–9023); 9000 unique; 23 duplicate an existing product | 16 in same-price pairs + 7 hidden in 3–4-copy groups alongside a genuine variant |
-| 24 Nov | duplicate listings: both selling? | fresh load | 16 of 16 checked pairs: both copies sell (~70–95 lines each) | live double entry: stock and sales split: real fault; 7 hidden ones not yet checked |
+| 24 Nov | duplicate listings: both selling? | fresh load | 16 of 16 checked pairs: both copies sell (~70–95 lines each) | live double entry: stock and sales split: real fault. All 23 (including the 7 hidden ones) had a same-price twin and were merged by sql/10 |
 | 24 Nov | duplicate listings: created_at | fresh load | spread 2023–2025, not clustered | cause unconfirmed; don't claim a batch import |
 | 24 Nov | product name groups: genuine variants | fresh load | 377 of 400 groups | not faults |
 | 24 Nov | duplicate (review): order_items (order_id, product_id) | fresh load | 616 groups / 1,233 rows | resolved by total vs lines: 533 double inserts, 75 splits |
@@ -195,3 +195,10 @@ All checks below have been written and run (sql/01–04).
 | 24 Nov | vocabulary: orders.status not in canonical 5 | fresh load | 116,394 of 159,384 (73%) | only 42,990 spelled exactly right |
 | 24 Nov | orders with no customer: value | fresh load | 210 orders, GH₵665,180.61 | revenue no customer total includes |
 | 24 Nov | cancelled orders: value, all spellings vs naive filter | fresh load | GH₵38,163,973.23 vs GH₵9,396,828.73 | naive filter misses GH₵28,767,144.50 (75% by value) |
+| 27 Nov | Row counts after cleanup | sql/00_run_all.sql | categories 93, products 4,000, customers 39,885, orders 159,150, order_items 334,812, inventory_log 282,246 | every difference explained in the Reconciliation table (data_findings.md) |
+| 27 Nov | Integrity checks after cleanup | sql/00_run_all.sql | every fault fixed or quarantined shows 0; left by decision: cycle 2, stock drift 144, total ≠ lines 1,864, NULL price 148, zero price 151, placeholder 1 | log dated after extract end 40 → 54: the 14 F-03 correction rows, dated at cleanup |
+| 27 Nov | Monday report before (500 customers) | raw load, measurement/x50 | 38.5 s; plan 37,937 ms; 7,000 full scans of orders | scaled to all customers: about 52 min |
+| 27 Nov | Monday report after | measurement/x90, 10 runs | median 872 ms, p95 1,041, worst 1,096; top 100 135 ms; running total 294 ms | plan: orders read once, 914.664 ms |
+| 27 Nov | Low-stock rollup | measurement/x90, 10 runs | median 5.1 ms, worst 6.0 ms | plan 8.128 ms |
+| 27 Nov | race_test.py, unmodified | after sql/00_run_all.sql | PASSED: test 1 25/25; test 2 50 sold, 350 refused, 0 errors, 3.48 s; test 3 refused cleanly; test 4 5 sold, 6 movements | 6 movements = opening stock + 5 sales |
+| 27 Nov | v_data_health | after race test | drift 144, negative 0, rootless categories 2, unpriced lines 299, total ≠ lines 1,864, future orders 0 | race test added no drift |

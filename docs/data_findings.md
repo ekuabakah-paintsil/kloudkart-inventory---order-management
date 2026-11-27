@@ -150,17 +150,17 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 - **Scale:** 300 lines. Orders with them are under-represented by GH₵447,270.88 at line level (GH₵323,142.93 for empty prices, GH₵124,127.95 for zero prices); 28 orders have no priced line at all.
 - **Effect on the client's number:** Line-level revenue is understated. Customer spend is unaffected because it is taken from the stored total.
 - **What I did about it:** Left the lines as they are: the price actually paid is unknown, and today's product price is not it. Customer spend uses the stored order total, so the report is unaffected (ADR-003). A rule now requires a positive price on every new or changed line; history is not rechecked (`NOT VALID`).
-- **Residual risk:** Line-level revenue for these 300 lines stays understated. New lines always carry the price at sale.
+- **Residual risk:** Line-level revenue for the 299 lines still in the data (one went to quarantine with its order) stays understated. New lines always carry the price at sale.
 
 ### F-14: Placeholder quantities — Severity: Low
 
 - **What it is:** Lines with quantity 999 or 9999 where the customer bought one.
 - **How I detected it:** Investigating the largest total-vs-lines mismatches, then listing every line with quantity above 20.
-- **Scale:** 6 lines (4 × 999, 2 × 9999). Every other line in the table has quantity 20 or less. In each affected order, the stored total matches a quantity of one.
+- **Scale:** 6 lines (4 × 999, 2 × 9999). Every other line in the table has quantity 20 or less. In five of the six affected orders, the stored total matches a quantity of one; the sixth also has lines with no price, so its total cannot be checked.
 - **Effect on the client's number:** About GH₵3.07 million of revenue that does not exist, in any figure built from lines. Customer spend is unaffected because it is taken from the stored total.
 - **What I did about it:** Set each placeholder quantity to the quantity the order total implies, where that comes out as a whole number between 1 and 20; any line where it does not is left and listed in `data_fix_log` for review (sql/10). A rule now requires quantity above 0.
 - **Result:** 5 lines corrected. 1 left for review: its order also contains lines with no price, so the total cannot tell what the quantity should be.
-- **Residual risk:** The line left for review keeps its placeholder until checked by hand. Nothing yet caps how large a quantity can be; an optional cap is listed under recommendations.
+- **Residual risk:** The line left for review keeps its placeholder until checked by hand. Nothing yet caps how large a quantity can be; a cap (every real line is 20 or fewer) is an option for Nana's team, noted in the working notes.
 
 ### F-15: A category whose parent does not exist — Severity: Low
 
