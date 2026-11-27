@@ -11,7 +11,8 @@
 --   below it. This script measures both. Found: one loop (9001 <-> 9002, 6 products) and
 --   one orphan with nothing below it.
 --
--- Run: docker exec -w /lab -i kloudkart psql -U postgres -f diagnosis/03_category_cycles.sql
+-- Run on the raw load to reproduce the recorded figures (the orphan is quarantined by sql/10).
+-- Run: docker exec -w /lab -i -e PAGER=cat kloudkart psql -U postgres -f diagnosis/03_category_cycles.sql
 -- =============================================================================
 
 -- ---------------------------------------------------------------- QUERY 1: loops

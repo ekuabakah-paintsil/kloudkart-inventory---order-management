@@ -15,8 +15,9 @@
 --     total HIGHER than lines  the customer was charged for something a line lost
 --     total LOWER  than lines  a line counts something the customer didn't pay for
 --
--- Run: docker exec -w /lab -i kloudkart psql -U postgres -f diagnosis/02_investigate_totals.sql
--- (Must run on the RAW load: after the cleanup these faults are gone.)
+-- Run: docker exec -w /lab -i -e PAGER=cat kloudkart psql -U postgres -f diagnosis/02_investigate_totals.sql
+-- Run on the RAW load to reproduce the recorded figures. After the cleanup some causes are
+-- removed (double inserts, placeholders) and the counts change: 1,864 mismatches remain.
 -- =============================================================================
 
 -- ---------------------------------------------------------------- QUERY 1
@@ -26,6 +27,9 @@
 --   count(*) > count(DISTINCT product_id) is true if some product appears twice.
 -- Each order is put in the FIRST kind that applies (the CASE checks in order 1 to 4),
 -- so no order is counted twice. sum(total − lines) shows the money involved.
+-- NOTE: kind 4 (1,594 orders on the raw load) still contains the 5 placeholder-quantity
+-- orders (F-14), which have no kind of their own here. Without them: 1,589, the truly
+-- unexplained mismatches of F-09.
 -- NOTE: sum() skips NULLs, so an order whose lines are ALL NULL-priced has no lines
 -- total at all: "cannot compare".
 WITH l AS (

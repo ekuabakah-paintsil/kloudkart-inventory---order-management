@@ -7,8 +7,8 @@
 --   how many rows fail it. It is the evidence behind docs/data_findings.md.
 --
 -- WHY ONE SCRIPT INSTEAD OF SEPARATE QUERIES
---   Because it is rerun: once on the raw load (the BEFORE, the baseline recorded in
---   docs/working_notes.md) and again at the end of sql/00_run_all.sql (the AFTER).
+--   Because it is rerun: once on the raw load (the BEFORE, saved by
+--   measurement/x01_export_baseline.sql to results/integrity_checks_before.csv) and again at the end of sql/00_run_all.sql (the AFTER).
 --   Comparing the two shows which faults the cleanup removed.
 --
 -- HOW TO READ THE LABELS
@@ -16,13 +16,16 @@
 --   info / review  counts to read, not errors (e.g. top-level categories legitimately
 --                  have no parent; products sharing a name are mostly genuine variants)
 --   Date checks assume the extract ends 2026-08-31 (last month with real volume).
+--   After the cleanup, "inventory_log.created_at after extract end" rises from 40 to 54:
+--   the 14 extra rows are the F-03 correction movements, dated when the cleanup ran.
+--   LABELS ARE KEYS: the before/after comparison matches rows by label, so never rename one.
 --
 -- HOW IT IS BUILT
 --   Every check is a small SELECT that returns two columns: a label and a count.
 --   UNION ALL stacks them into one table. ORDER BY at the very end sorts by label.
 --   Rule: UNION ALL goes BETWEEN two checks, never before ORDER BY.
 --
--- Run: docker exec -w /lab -i kloudkart psql -U postgres -f diagnosis/01_integrity_checks.sql
+-- Run: docker exec -w /lab -i -e PAGER=cat kloudkart psql -U postgres -f diagnosis/01_integrity_checks.sql
 -- =============================================================================
 
 -- ---------------------------------------------------------------- ORPHANS
@@ -42,15 +45,8 @@ AND    o.order_id IS NULL
 
 UNION ALL
 
-SELECT 'impossible: products.stock_quantity < 0',
+SELECT 'orphan: products.category_id → categories',
        count(*)
-FROM   products
-WHERE  stock_quantity < 0
-
-UNION ALL
-
-SELECT 'orphan: products.category_id → categories' AS check_name,
-       count(*) AS failing_rows
 FROM   products p
 LEFT   JOIN categories c ON c.category_id = p.category_id
 WHERE  p.category_id IS NOT NULL
@@ -132,6 +128,7 @@ UNION ALL SELECT 'null (info): inventory_log.note', count(*) FROM inventory_log 
 -- and the placeholder quantities 999/9999 (every genuine line is 20 or less).
 -- NULLs are not counted here (NULL <= 0 is "unknown", not true): the NULL checks cover them.
 UNION ALL SELECT 'impossible: products.price <= 0', count(*) FROM products WHERE price <= 0
+UNION ALL SELECT 'impossible: products.stock_quantity < 0', count(*) FROM products WHERE stock_quantity < 0
 UNION ALL SELECT 'impossible: orders.total_amount <= 0', count(*) FROM orders WHERE total_amount <= 0
 UNION ALL SELECT 'impossible: order_items.quantity <= 0', count(*) FROM order_items WHERE quantity <= 0
 UNION ALL SELECT 'impossible: order_items.unit_price <= 0', count(*) FROM order_items WHERE unit_price <= 0

@@ -13,14 +13,16 @@
 --   matches completed + shipped orders to within 70 units, so it is NOT a fault.
 --   (b) holds for 3,879 of 4,023 products; the other 144 became finding F-01.
 --
--- Run: docker exec -w /lab -i kloudkart psql -U postgres -f diagnosis/04_investigate_stock.sql
+-- Run on the raw load to reproduce the recorded figures (the cleanup changes them).
+-- Run: docker exec -w /lab -i -e PAGER=cat kloudkart psql -U postgres -f diagnosis/04_investigate_stock.sql
 -- =============================================================================
 
 -- ---------------------------------------------------------------- QUERY 1
 -- 1. Units sold per order lines vs units logged as sales (excluding the 6 placeholder lines)
 -- Two single numbers side by side. Sales are stored as NEGATIVE movements, so the
 -- minus sign in -sum(change_qty) turns them back into units sold.
--- quantity < 999 leaves out the placeholder lines, which would add ~42,000 fake units.
+-- quantity < 999 leaves out the placeholder lines, which would add 23,994 fake units
+-- (4 × 999 + 2 × 9,999).
 SELECT (SELECT sum(quantity) FROM order_items WHERE quantity < 999)        AS units_in_order_lines,
        (SELECT -sum(change_qty) FROM inventory_log WHERE reason = 'sale')  AS units_logged_as_sales;
 
