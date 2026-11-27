@@ -12,7 +12,7 @@
 
 ## Method
 
-- **Hardware / container spec:** [laptop model, CPU, RAM], Windows with Docker Desktop, PostgreSQL 18.7 in the official `postgres:18` container started with `-c max_connections=500`; all other settings default.
+- **Hardware / container spec:** HP EliteBook 850 G7 laptop, Intel Core i7-10510U (4 cores, 1.8 GHz), 32 GB RAM,, Windows with Docker Desktop, PostgreSQL 18.7 in the official `postgres:18` container started with `-c max_connections=500`; all other settings default.
 - **What was timed, from which event to which event:** the Results table comes from `measurement/x90_export_results.sql`, which runs each query inside the database and times it with `clock_timestamp()` from start to last row; nothing is sent to the screen. `measurement/x80_measure.sql` repeats the runs with psql `\timing`, which also counts sending the rows to psql: 914–1,271 ms for the full report, 143–195 ms for the top 100, 334–376 ms for the running total and 6.6–8.1 ms for the rollup. Both sets are within the target.
 - **Runs, warm or cold, and which figure is reported:** 10 consecutive runs per query in one session. Run 1 is cold (data not yet in memory); runs 2–10 are warm. Median and worst are over all 10 runs; p95 with 10 runs is effectively the worst run, and is reported as such.
 - **How to reproduce:**
