@@ -15,7 +15,7 @@ The same is true of the other faults found: the new rules stop most of them, but
 
 Supporting changes make the watch trustworthy from day one: a new product's opening stock is recorded automatically as its first movement (sql/30), and every sale and cancellation records its movement in the same step as the stock change (sql/40). So a product added or sold through the normal route never appears as drift; anything that does appear was changed some other way.
 
-Tested on a synthetic extract: products created and sold through `place_order`, including 400 simultaneous buyers, added no drift; a product whose stock was changed directly appeared immediately.
+Checked on the real extract: the watch counted 144 products before cleanup, 144 after it, and still 144 after `race_test.py` created test products and sold them to 400 simultaneous buyers (`results/data_health.csv`). The fixes and the new order route added no drift. During development, a product whose stock was changed directly appeared on the list immediately.
 
 ## What it is worth to Nana
 

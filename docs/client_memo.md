@@ -19,8 +19,8 @@ Most of your records are sound: 98.5% of orders agree with their own line items,
 
 | What you asked for | Status | Evidence |
 |---|---|---|
-| No overselling | Done | The required test (400 buyers for 50 units, and two buyers for the last unit, 25 times): exactly one winner every time, everyone else told "out of stock", no errors. |
-| A fast Monday report | Done | All customers in under a second (0.9 s), against about 52 minutes before. |
+| No overselling | Done | The required test (400 buyers for 50 units, and two buyers for the last unit, 25 times): exactly one winner every time, everyone else told "out of stock", no errors. 400 buyers were sorted out in 3.5 seconds. |
+| A fast Monday report | Done | All customers in about a second (0.9 s typical, 1.1 s at worst), against about 52 minutes before. |
 | Low stock at a glance, by category | Done | Every level of the category tree in five thousandths of a second, however deep marketing makes it. |
 | Proof of what happened | Done | Every stock movement records the order behind it and who made it; anything changed or removed is kept in a record that cannot be altered. |
 
@@ -38,4 +38,3 @@ The "triggers" you were told about would not have stopped the overselling on the
 - **About 1,600 orders (1%)** have a total that disagrees with their items for no reason I could find. I used the checkout total, but I cannot prove it is the right one.
 - **The 144 stock figures** stay as they are until counted. Until then, the system can only protect the number it is given.
 - **Your record times have no time zone.** I assumed Accra time; it matters only if a system elsewhere ever writes to your records.
-- **The figures in brackets** are being re-measured on your full data before you rely on them.

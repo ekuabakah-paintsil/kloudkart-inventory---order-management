@@ -23,12 +23,12 @@ The extract covers August 2025 to August 2026: 159,384 orders, 40,420 customer r
 | Raw load: orders | 159,384 | — | as delivered |
 | Raw load: order_items | 336,559 | — | as delivered |
 | Raw load: inventory_log | 282,352 | — | as delivered |
-| After fixes: customers | [fill in] | [fill in] | duplicate customers merged (F-05) |
-| After fixes: products | [fill in] | [fill in] | duplicate listings merged (F-02) |
-| After fixes: orders | [fill in] | [fill in] | no customer (F-06), dated after extract end (F-10) |
-| After fixes: order_items | [fill in] | [fill in] | lines of quarantined orders, orphans (F-12), double inserts (F-11) |
-| After fixes: inventory_log | [fill in] | [fill in] | orphan movements removed (F-07), negative-stock corrections added (F-03) |
-| After fixes: categories | [fill in] | [fill in] | empty orphan category (F-15) |
+| After fixes: customers | 39,885 | −535 | duplicate customers merged (F-05) |
+| After fixes: products | 4,000 | −23 | duplicate listings merged (F-02) |
+| After fixes: orders | 159,150 | −234 | no customer (F-06: 210), dated after extract end (F-10: 24) |
+| After fixes: order_items | 334,812 | −1,747 | lines of quarantined orders (F-06: 471, F-10: 48), orphans (F-12: 692), double inserts (F-11: 536) |
+| After fixes: inventory_log | 282,246 | −106 | orphan movements removed (F-07: −120), negative-stock corrections added (F-03: +14) |
+| After fixes: categories | 93 | −1 | empty orphan category (F-15) |
 
 The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in a `quarantine_*` table with its finding; every in-place change is in `data_fix_log`.
 
@@ -40,7 +40,7 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 - **How I detected it:** Summed `inventory_log.change_qty` per product and compared it with `products.stock_quantity` (check `consistency: products where stock <> sum of movements`; `diagnosis/04_investigate_stock.sql` query 2).
 - **Scale:** 144 of 4,023 products (3.6%). 122 hold less stock than their movements imply (−2,464 units); 22 hold more (+89 units). Net 2,375 units unaccounted for. The other 3,879 products reconcile exactly.
 - **Effect on the client's number:** The order-placement fix can only protect the number it is given. For the 22 overstated products, a perfectly locked order can still sell up to 89 units that may not exist; for the 122 understated products, real stock is refused or unrecorded losses go unnoticed. This is the "stock counts no longer match reality" Nana describes, located and sized.
-- **What I did about it:** Left the stock figures unchanged: the data cannot say whether the shelf count or the trail is wrong, and resetting either would be guessing (ADR-006). Built `v_stock_drift` (sql/70), which lists every product whose stock does not match its trail, by how much and when it last moved: a ready-made counting list for the warehouse.
+- **What I did about it:** Left the stock figures unchanged: the data cannot say whether the shelf count or the trail is wrong, and resetting either would be guessing (ADR-005). Built `v_stock_drift` (sql/70), which lists every product whose stock does not match its trail, by how much and when it last moved: a ready-made counting list for the warehouse.
 - **Residual risk:** Until the 144 products are physically counted, their stock figures may be wrong, so `place_order` protects a number that may not match the shelf. Drift from any new cause appears in `v_stock_drift` and `v_data_health` the day it happens.
 
 ### F-02: The same product is listed twice, and both listings sell — Severity: Critical
@@ -50,7 +50,8 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 - **Scale:** 23 duplicate listings. 16 sit in same-price pairs; 7 sit in groups of three or four alongside a genuine variant. In all 16 checked pairs both copies sell (about 70–95 order lines each). Creation dates span 2023–2025, so the cause is not a single import.
 - **Effect on the client's number:** One shelf, two stock counts. Neither count is the real stock, sales history per product is understated by roughly half for these items, and one listing can keep selling after the other reaches zero. No locking strategy prevents overselling across two listings, and flash-sale volume makes it worse.
 - **What I did about it:** Merged each duplicate listing into its original (same normalised name, category and price, lower id): order lines and stock movements re-pointed, stock added, the copy moved to `quarantine_products`, each merge recorded in `data_fix_log` (sql/10).
-- **Residual risk:** Duplicates whose price has since drifted are not merged by this rule; they remain as separate listings. Nothing in the database stops a new duplicate listing being created; this needs a check in the process that adds products.
+- **Result:** All 23 were merged. The 7 in larger groups also had a same-price twin, so the rule caught them too; the other members of those groups are genuine variants at different prices and were left alone.
+- **Residual risk:** A future duplicate whose price has drifted would not be merged by this rule. Nothing in the database stops a new duplicate listing being created; this needs a check in the process that adds products.
 
 ### F-03: Products with negative stock — Severity: High
 
@@ -94,7 +95,7 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 - **How I detected it:** Anti-join from `inventory_log` to `products` (check `orphan: inventory_log.product_id → products`).
 - **Scale:** 120 of 282,352 movements.
 - **Effect on the client's number:** Entries in the audit trail that no auditor can tie to a product, which undermines the "proof of what happened" Nana asked for.
-- **What I did about it:** Moved the 120 movements to `quarantine_inventory_log`, then made every movement require an existing product (sql/10, sql/20). All movements are now protected by the archive trigger (ADR-005).
+- **What I did about it:** Moved the 120 movements to `quarantine_inventory_log`, then made every movement require an existing product (sql/10, sql/20). All movements are now protected by the archive trigger (ADR-004).
 - **Residual risk:** The 120 movements stay unexplained. New ones cannot point at a missing product.
 
 ### F-08: A loop in the category tree — Severity: Medium
@@ -110,16 +111,16 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 
 - **What it is:** After explaining mismatches by lost prices (F-13), double inserts (F-11) and placeholder quantities (F-14), a remainder of orders still disagree with the sum of their lines.
 - **How I detected it:** Classified every order by what its lines contain, then measured the size and direction of mismatches in the unexplained group (`diagnosis/02_investigate_totals.sql`).
-- **Scale:** 1,594 of 159,384 orders (1%): 789 where the total is higher (+GH₵420,453.66) and 805 where it is lower (−GH₵2,313,763.54). No difference is 5 pesewas or less, so it is not rounding. *To verify: this group appears to include 5 placeholder-quantity orders (F-14) worth about −GH₵1.93m of the lower figure; if so, the truly unexplained remainder is 1,589 orders.*
+- **Scale:** 1,594 of 159,384 orders (1%): 789 where the total is higher (+GH₵420,453.66) and 805 where it is lower (−GH₵2,313,763.54). No difference is 5 pesewas or less, so it is not rounding. Confirmed on the cleaned data: 5 of these were placeholder-quantity orders (F-14), worth about −GH₵1.93m of the lower figure, and are now fixed. The truly unexplained remainder is **1,589 orders**.
 - **Effect on the client's number:** For about 1% of orders, either the stored total or the lines is wrong and the data cannot say which. Spend is taken from the stored total (see the decision records), so the exposure is bounded to these orders.
-- **What I did about it:** Left as it is: the correct figure is unknown. Customer spend is taken from the stored total (ADR-004), which bounds the exposure to these orders.
+- **What I did about it:** Left as it is: the correct figure is unknown. Customer spend is taken from the stored total (ADR-003), which bounds the exposure to these orders.
 - **Residual risk:** About 1% of orders may carry a wrong spend figure. New orders are written in one step with total and line together, so they always agree.
 
 ### F-10: Orders and stock movements dated after the extract ends — Severity: Medium
 
 - **What it is:** Real activity runs from August 2025 to August 2026. After that, a handful of rows are dated up to August 2027.
 - **How I detected it:** Counted orders by month, which showed thousands per month to August 2026 then a trickle; checked the seconds of each timestamp; counted rows on or after 2026-09-01 (checks `date: ... after extract end`).
-- **Scale:** 24 orders and 40 stock movements. Every bad-dated order is exactly on the minute, against 1.7–1.8% on the minute in normal months, which points to hand entry rather than the checkout clock. A check against today's date found only 16 and 33, missing 8 and 7.
+- **Scale:** 24 orders and 40 stock movements. Every bad-dated order is exactly on the minute, against 1.7–1.8% on the minute in normal months, which points to hand entry rather than the checkout clock. A check against today's date found only 16 and 33, missing 8 and 7. After cleanup the check shows 54 movements, not 40: the extra 14 are the F-03 correction rows, which are dated on the day the cleanup ran. They are genuine, recent entries, not bad data.
 - **Effect on the client's number:** Spend lands in months that have not happened, distorting the trailing-12-months view, and the audit trail contains movements with impossible dates.
 - **What I did about it:** Moved the 24 orders and their lines to quarantine, since their real date is unknown (sql/10). The 40 bad-dated stock movements stay in the trail because the movements are real and the stock reconciles with them; they are listed here. Timestamps are now stored with a time zone (sql/20).
 - **Residual risk:** The 40 movements carry impossible dates in the trail. The report window ends at the latest order up to today, so a future date can no longer push spend into months that have not happened (`v_data_health` counts any that appear).
@@ -128,7 +129,7 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 
 - **What it is:** The same product appears on two lines of one order where the customer paid for it once.
 - **How I detected it:** Found orders with repeated `(order_id, product_id)` lines, then compared each order's stored total with its lines: a split sale matches the total, a double insert exceeds it.
-- **Scale:** 616 repeated-line groups (1,233 rows). In 533 orders the lines exceed the total by GH₵883,264.69 in all (double inserts); 75 match their total (legitimate splits at different prices, not faults).
+- **Scale:** 616 repeated-line groups (1,233 rows). In 533 orders the lines exceed the total by GH₵883,264.69 in all (double inserts, 536 extra lines, since a few orders had more than one); 75 match their total (legitimate splits at different prices, not faults).
 - **Effect on the client's number:** Overstates units and revenue per product for these items. Customer spend is unaffected because it is taken from the stored total.
 - **What I did about it:** Moved each exact copy to `quarantine_order_items` where the order total shows it was charged once (sql/10). Repeated lines in orders whose total matches (legitimate split sales) were left alone.
 - **Residual risk:** Per-product sales for the remaining lines are correct. Nothing stops a new double insert by another application path; `place_order` writes each line once.
@@ -148,7 +149,7 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 - **How I detected it:** `unit_price IS NULL` and `unit_price <= 0` checks, then compared the totals of the orders containing them with their lines.
 - **Scale:** 300 lines. Orders with them are under-represented by GH₵447,270.88 at line level (GH₵323,142.93 for empty prices, GH₵124,127.95 for zero prices); 28 orders have no priced line at all.
 - **Effect on the client's number:** Line-level revenue is understated. Customer spend is unaffected because it is taken from the stored total.
-- **What I did about it:** Left the lines as they are: the price actually paid is unknown, and today's product price is not it. Customer spend uses the stored order total, so the report is unaffected (ADR-004). A rule now requires a positive price on every new or changed line; history is not rechecked (`NOT VALID`).
+- **What I did about it:** Left the lines as they are: the price actually paid is unknown, and today's product price is not it. Customer spend uses the stored order total, so the report is unaffected (ADR-003). A rule now requires a positive price on every new or changed line; history is not rechecked (`NOT VALID`).
 - **Residual risk:** Line-level revenue for these 300 lines stays understated. New lines always carry the price at sale.
 
 ### F-14: Placeholder quantities — Severity: Low
@@ -158,7 +159,8 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 - **Scale:** 6 lines (4 × 999, 2 × 9999). Every other line in the table has quantity 20 or less. In each affected order, the stored total matches a quantity of one.
 - **Effect on the client's number:** About GH₵3.07 million of revenue that does not exist, in any figure built from lines. Customer spend is unaffected because it is taken from the stored total.
 - **What I did about it:** Set each placeholder quantity to the quantity the order total implies, where that comes out as a whole number between 1 and 20; any line where it does not is left and listed in `data_fix_log` for review (sql/10). A rule now requires quantity above 0.
-- **Residual risk:** A line left for review keeps its placeholder until checked by hand. Nothing yet caps how large a quantity can be; an optional cap is listed under recommendations.
+- **Result:** 5 lines corrected. 1 left for review: its order also contains lines with no price, so the total cannot tell what the quantity should be.
+- **Residual risk:** The line left for review keeps its placeholder until checked by hand. Nothing yet caps how large a quantity can be; an optional cap is listed under recommendations.
 
 ### F-15: A category whose parent does not exist — Severity: Low
 
@@ -187,7 +189,7 @@ The "after" counts are printed by `sql/00_run_all.sql`. Every removed row is in 
 
 ## Could not verify
 
-- **The 1,594 orders whose total disagrees with their lines (F-09):** which figure is correct cannot be determined from the data.
+- **The 1,589 orders whose total disagrees with their lines for no known reason (F-09):** which figure is correct cannot be determined from the data.
 - **90 stock takes recorded with zero change:** either every count matched the system, or adjustments were not logged.
 - **Refunded orders:** 21,531 units on refunded orders have no sale movement and returns total only 1,017 units. Assumed refunded before shipping; not provable from the data.
 - **The time zone of stored timestamps:** none is recorded. Assumed Accra time (UTC+0), which makes the missing zone harmless today.
