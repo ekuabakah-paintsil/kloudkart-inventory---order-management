@@ -155,6 +155,7 @@ docker exec -w /lab -i -e PAGER=cat kloudkart psql -U postgres -f measurement/x8
 | `docs/client_memo.md` | 4. One-page memo to Nana |
 | `docs/improvement.md` | 5. Improvement beyond the brief |
 | `docs/measurement_report.md` | Before/after performance figures |
+| `docs/schema_after.sql` | The schema after the solution, exported from the built database with `pg_dump --schema-only` (`schema.sql` is the original, unmodified) |
 | `docs/working_notes.md` | Schema review, judgement calls and every measurement taken |
 
 ---
