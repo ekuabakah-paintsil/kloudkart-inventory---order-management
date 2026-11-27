@@ -6,7 +6,7 @@
 -- THE QUESTION
 --   Every order has a stored total (written at checkout) and a set of lines
 --   (quantity × price). They should agree. On 2,398 orders they don't. Why?
---   The answer decided which figure the Monday report trusts (ADR-004).
+--   The answer decided which figure the Monday report trusts (ADR-003).
 --
 -- THE APPROACH: sort mismatches by likely cause before judging them
 --   Each order is classified by what its lines contain (a NULL price? a zero price? the
