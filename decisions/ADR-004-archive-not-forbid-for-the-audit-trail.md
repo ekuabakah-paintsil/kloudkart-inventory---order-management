@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-25
-- **Decision owner:** Senya (WISDOMSKA)
+- **Decision owner:** Ekua Micah Aakah-Paintsil
 
 ## Context
 
