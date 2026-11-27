@@ -18,7 +18,6 @@
 -- =============================================================================
 -- THE MECHANISM: one conditional UPDATE  (decision record ADR-001)
 -- =============================================================================
--- Mechanism: one conditional UPDATE.
 --     UPDATE products SET stock_quantity = stock_quantity - q
 --     WHERE product_id = p AND stock_quantity >= q
 --

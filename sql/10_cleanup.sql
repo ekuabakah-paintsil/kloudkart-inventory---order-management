@@ -201,6 +201,8 @@ DELETE FROM order_items WHERE order_id IN (SELECT order_id FROM quarantine_order
 DELETE FROM orders      WHERE order_id IN (SELECT order_id FROM quarantine_orders);
 -- The 40 stock movements dated after the extract end stay in the log: the movement is real
 -- (stock reconciles with it), only its date is wrong. They are listed in data_findings.md.
+-- (The 14 F-03 correction movements added further down are dated at cleanup time, so after
+-- this script the "after extract end" check shows 54 movements: 40 old + 14 new, not a fault.)
 
 -- =============================================================================
 -- F-12  Order lines that belong to no order  ->  QUARANTINE

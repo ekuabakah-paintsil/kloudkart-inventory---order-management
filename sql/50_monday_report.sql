@@ -6,7 +6,7 @@
 --   total spent · order count · spend in each of the last 12 months ·
 --   a running total (she keeps this by hand today) · a top-100 ranking
 --
--- WHY THE OLD REPORT TOOK ~40 MINUTES
+-- WHY THE OLD REPORT TOOK ~40 MINUTES (about 52 measured on the full extract)
 --   It looked each figure up separately: for each of ~40,000 customers, one search for the
 --   total, one for the count and one for EACH of 12 months, about 560,000 searches of the
 --   orders table. (measurement/x50_monday_report_before.sql reproduces it for timing.)
