@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-25
-- **Decision owner:** Ekua Micah Aakah-Paintsil
+- **Decision owner:** Ekua Micah Abakah-Paintsil
 
 ## Context
 
@@ -44,3 +44,4 @@ Every UPDATE or DELETE on `inventory_log` first copies the old row, with who and
 ## What this survives
 
 Under a flash sale the archive is not involved: sales only add rows, and the extra work happens only on edits and deletes. The `order_id` recorded on each sale means an auditor can tie each of the 50 flash-sale units to its order, even if that order is later deleted (it is deliberately not a foreign key, so the trail outlives what it describes).
+
