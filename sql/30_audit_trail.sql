@@ -16,7 +16,7 @@
 --               and the archive itself refuses all changes.
 --   3. Read     v_audit_trail shows live and archived movements in one place.
 --
--- WHY ARCHIVE INSTEAD OF SIMPLY FORBIDDING CHANGES? (ADR-005)
+-- WHY ARCHIVE INSTEAD OF SIMPLY FORBIDDING CHANGES? (ADR-004)
 --   race_test.py deletes the log rows of its own test products when it cleans up, and it
 --   must run unmodified. Forbidding deletes would break it. Archiving keeps the test
 --   working AND keeps every removed row on record, with who removed it and when.
