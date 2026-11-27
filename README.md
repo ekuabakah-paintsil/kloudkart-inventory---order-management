@@ -2,12 +2,12 @@
 
 DE03 lab (SQL / PostgreSQL). Kloud Kart is an Accra e-commerce company whose database
 oversold stock under contention and whose weekly customer-spending report took about
-forty minutes. This repository diagnoses the data and fixes both problems on the existing
+forty minutes (about 52 when measured on the full extract). This repository diagnoses the data and fixes both problems on the existing
 PostgreSQL server: no new infrastructure, no new cost.
 
 | Client criterion | Where it is met | Result |
 |---|---|---|
-| No overselling | `sql/40_place_order.sql` | `race_test.py` passes unmodified, every run |
+| No overselling | `sql/40_place_order.sql` | `race_test.py` passes unmodified: 400 buyers for 50 units in 3.5 s, 0 errors |
 | Fast Monday report | `sql/50_monday_report.sql` | 0.87 s for all customers, from about 52 min |
 | Low-stock rollup through the category tree | `sql/60_category_rollup.sql` | any depth, loop-safe, 5 ms |
 | Audit trail of every stock movement | `sql/30_audit_trail.sql` | nothing can vanish or change silently |
@@ -84,12 +84,18 @@ SELECT * FROM v_report_months;                      -- which month each column m
 SELECT * FROM v_low_stock_rollup ORDER BY path;     -- low stock by category
 SELECT * FROM v_audit_trail WHERE product_id = 1;   -- every movement of one product
 SELECT * FROM v_data_health;                        -- is the data still clean?
-SELECT * FROM place_order(1, 1, 1);                 -- place an order
+SELECT * FROM place_order(1, 1, 1);                 -- places a REAL order and takes 1 unit of stock
 ```
 
 ### Measuring and saving the evidence
 
-The full sequence, from raw data to every piece of evidence in `results/`:
+The full sequence, from raw data to every piece of evidence in `results/`.
+In Windows PowerShell, set UTF-8 first, or dashes and arrows in the saved `.txt` files come out garbled (`ΓÇö`):
+
+```powershell
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$env:PYTHONIOENCODING = "utf-8"
+```
 
 ```powershell
 # Before: raw data, no solution
@@ -143,6 +149,7 @@ docker exec -w /lab -i -e PAGER=cat kloudkart psql -U postgres -f measurement/x8
 | File | Deliverable |
 |---|---|
 | `docs/data_findings.md` | 1. Data diagnosis: 15 findings ranked by risk |
+| `sql/` (run by `sql/00_run_all.sql`) | 2. Working SQL solution; `race_test.py` passes unmodified |
 | `decisions/ADR-001` … `ADR-006` | 3. Key decisions, including whether triggers alone would have worked |
 | `docs/client_memo.md` | 4. One-page memo to Nana |
 | `docs/improvement.md` | 5. Improvement beyond the brief |
