@@ -50,8 +50,8 @@
 --
 --   NO lock_timeout IS SET, DELIBERATELY. A timeout that fires raises an error, and
 --   race_test counts any error reaching the caller as a failure. The wait is bounded instead
---   by keeping the transaction short (three inserts, no outside calls): 400 buyers on one
---   unit resolved in about 2 seconds in testing. (ADR-001, "What this survives".)
+--   by keeping the transaction short (three inserts, no outside calls): 400 buyers for 50
+--   units resolved in 3.48 seconds on the real extract. (ADR-001, "What this survives".)
 --
 -- WALK-THROUGH: two buyers, Ama and Kofi, one unit left
 --   10:00:00.000  Ama's UPDATE finds stock 1 >= 1, locks the product row, sets stock to 0.
@@ -73,7 +73,7 @@
 --
 -- Stock is now committed when the order is PLACED (status 'pending'), not at fulfilment.
 -- cancel_order() therefore returns the stock, with its own movement in the trail.
--- (Decision record ADR-002.)
+-- (Decision record ADR-001.)
 -- =============================================================================
 
 \echo '== 40_place_order: order placement and cancellation'
@@ -144,7 +144,7 @@ BEGIN
     -- undone too. No order without its stock movement, no movement without its order.
 
     -- The order. order_id is left out, so PostgreSQL generates it (identity, sql/20).
-    -- Status 'pending': stock is committed at placement (ADR-002).
+    -- Status 'pending': stock is committed at placement (ADR-001).
     -- Total = price × quantity, computed here, so the stored total and the line below
     -- always agree. That kind of disagreement (F-09) can't happen for new orders.
     INSERT INTO orders (customer_id, order_date, status, total_amount)
@@ -212,7 +212,7 @@ BEGIN
         VALUES (r.product_id, r.quantity, 'cancellation', now(), p_order_id);
     END LOOP;
 
-    -- The order keeps its total; the status records that it was cancelled (ADR-004).
+    -- The order keeps its total; the status records that it was cancelled (ADR-003).
     UPDATE orders o SET status = 'cancelled' WHERE o.order_id = p_order_id;
     RETURN QUERY SELECT true, 'Order ' || p_order_id || ' cancelled; stock returned';
 END;

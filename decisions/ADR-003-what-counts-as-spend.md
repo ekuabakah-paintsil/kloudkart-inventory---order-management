@@ -48,7 +48,7 @@ The brief asks for "total spent" and "monthly spend for the trailing twelve mont
 
 - **What this buys:** A spend figure that survives every line-level fault found, a ranking that matches money actually kept, and a window that is right whether the report runs on live data or on an extract.
 - **What this costs:** Spend cannot be broken down by product from the same figure; product-level revenue still depends on the lines.
-- **What it costs the client if I am wrong:** On the 1,594 orders whose total and lines disagree for no identified reason (F-09), about 1% of orders, either figure may be the wrong one; the exposure is bounded to those orders. If Nana wanted refunds counted, the 6,479 refunded orders would be missing from spend.
+- **What it costs the client if I am wrong:** On the 1,589 orders whose total and lines disagree for no identified reason (F-09), about 1% of orders, either figure may be the wrong one; the exposure is bounded to those orders. If Nana wanted refunds counted, the 6,479 refunded orders would be missing from spend.
 - **What would make me revisit this:** Nana or Adwoa defining spend differently. Each choice is one line in `v_spend_orders`.
 
 ## What this survives
